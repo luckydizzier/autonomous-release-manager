@@ -1,14 +1,8 @@
 # Autonomous Release Manager (arm)
 
-Local-only release manager CLI for git repositories:
-- reads git commit history and diff stats
-- validates Conventional Commits
-- computes SemVer bump
-- generates/prepends Markdown changelog
-- builds a zip artifact
-- supports dry-run and rollback
+Local-only release manager CLI for git repositories.
 
-## Install (dev)
+## Install
 
 ```bash
 python3.12 -m venv .venv
@@ -17,23 +11,61 @@ pip install -U pip
 pip install -e ".[dev]"
 ```
 
-## Commands (MVP)
+## Usage
 
 ```bash
-arm status
-arm validate [--from REF --to REF]
-arm plan [--json] [--level auto|major|minor|patch]
-arm release [--dry-run] [--level ...] [--no-commit] [--no-tag] [--allow-dirty] \
-  [--sign-commit] [--sign-tag] [--push] [--remote-safe/--no-remote-safe] [--remote origin]
-arm rollback [--dry-run] [--hard] [--keep-artifacts]
+arm --repo . status
+arm --repo . validate
+arm --repo . plan
+arm --repo . release --dry-run --project-name demo
+arm --repo . rollback --dry-run
 ```
 
-## Notes
+## Examples
 
-- By default, `arm release` refuses to run on a dirty working tree unless `--allow-dirty` is set.
-- `arm release --dry-run` has **zero side effects** (no file writes, no tags, no dist artifacts, no `.arm` log).
-- By default, **remote-safe mode is ON**, so `--push` is blocked unless you pass `--no-remote-safe`.
-- Branch policy can be enforced via `arm.toml`.
+### Dry run release
+
+```bash
+arm --repo . release --dry-run --allow-dirty --project-name demo
+```
+
+### Apply release on allowed branch
+
+```bash
+arm --repo . release --project-name autonomous-release-manager
+```
+
+### Signed release metadata
+
+```bash
+arm --repo . release --sign-commit --sign-tag --project-name autonomous-release-manager
+```
+
+### Explicit remote push (unsafe by default)
+
+```bash
+arm --repo . release --push --no-remote-safe --remote origin --project-name autonomous-release-manager
+```
+
+## Flags
+
+### `remote-safe`
+
+- Default is enabled (`--remote-safe`).
+- When enabled, `--push` is blocked to prevent accidental remote side effects.
+- Disable explicitly with `--no-remote-safe` only when you intend to push.
+
+### `allowed_branches`
+
+- Set via `arm.toml` (`[policy].allowed_branches`).
+- Supports exact branch names and simple globs like `release/*`.
+- Release execution fails fast when the current branch is not allowed.
+
+### `sign-commit` and `sign-tag`
+
+- `--sign-commit` signs the release commit (`git commit -S`).
+- `--sign-tag` signs the release tag (`git tag -s`).
+- Requires local git signing setup (GPG/SSH signing config).
 
 ## Policy config (`arm.toml`)
 
@@ -49,11 +81,13 @@ remote_safe_default = true
 default_remote = "origin"
 ```
 
-## Quick smoke test (in any git repo)
+## Commands
 
 ```bash
-arm --repo . status
-arm --repo . validate
-arm --repo . plan
-arm --repo . release --dry-run --allow-dirty --project-name demo
+arm status
+arm validate [--from REF --to REF]
+arm plan [--json] [--level auto|major|minor|patch]
+arm release [--dry-run] [--level ...] [--no-commit] [--no-tag] [--allow-dirty] \
+  [--sign-commit] [--sign-tag] [--push] [--remote-safe/--no-remote-safe] [--remote origin]
+arm rollback [--dry-run] [--hard] [--keep-artifacts]
 ```
