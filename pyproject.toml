@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "autonomous-release-manager"
-version = "0.0.0"
+version = "0.1.0"
 description = "Local-only CLI to plan/execute releases from a git repo (Conventional Commits + SemVer + changelog + zip + rollback)."
 readme = "README.md"
 requires-python = ">=3.12"
