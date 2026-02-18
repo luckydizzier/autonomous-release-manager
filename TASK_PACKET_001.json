@@ -1,0 +1,96 @@
+{
+  "id": "ARM-CLI-001",
+  "title": "Autonomous Release Manager CLI (Python 3.12) - MVP package",
+  "repo_dir": "/Users/tankoferenc/.openclaw/projects/autonomous-release-manager",
+  "role": "Coder",
+  "objective": "Implement a complete local-only CLI tool that plans and executes releases from a git repo: reads git diff/log, validates Conventional Commits, computes SemVer bump, generates Markdown changelog, builds zip artifact, supports dry-run and rollback.",
+  "hard_constraints": {
+    "python": "3.12",
+    "local_only": true,
+    "no_external_apis": true,
+    "cli_only": true
+  },
+  "defaults": {
+    "tag_prefix": "v",
+    "initial_version": "0.1.0",
+    "bump_rules": {
+      "major": "any BREAKING CHANGE (bang in header or BREAKING CHANGE: footer)",
+      "minor": "feat",
+      "patch": "fix|perf|refactor|docs|chore|test|build|ci|style",
+      "none": "revert|merge commits ignored"
+    },
+    "range": "last tag with prefix..HEAD; if none then all commits in repo history..HEAD",
+    "dirty_tree_policy": "fail unless --allow-dirty provided",
+    "rollback_policy": "safe by default: delete tag + git revert changelog commit + delete artifacts (from .arm log)"
+  },
+  "deliverables": {
+    "package": [
+      "pyproject.toml (console_script entry: arm)",
+      "src/arm/** modules",
+      "README.md",
+      "CHANGELOG.md (generated format supported)",
+      ".gitignore",
+      "tests/** (pytest)"
+    ],
+    "commands": [
+      "arm status",
+      "arm validate [--from REF --to REF]",
+      "arm plan [--json] [--level auto|major|minor|patch]",
+      "arm release [--dry-run] [--level ...] [--no-commit] [--no-tag] [--allow-dirty]",
+      "arm rollback [--dry-run] [--hard] [--keep-artifacts]"
+    ],
+    "runtime_artifacts": [
+      ".arm/last_release.json",
+      "dist/<project>-<version>.zip"
+    ]
+  },
+  "design_requirements": {
+    "implementation": {
+      "cli": "typer",
+      "git": "call git via subprocess; do not depend on libgit2",
+      "changelog": "prepend new release section to CHANGELOG.md",
+      "transaction_log": "record executed operations and undo data in .arm/last_release.json",
+      "zip": "zipfile from stdlib; exclude .git and .arm; allow include/exclude globs"
+    },
+    "exit_codes": {
+      "0": "success",
+      "1": "runtime error",
+      "2": "validation error (non-conventional commits etc.)"
+    }
+  },
+  "acceptance_criteria": [
+    "arm validate returns exit 0 for compliant commits and exit 2 with a list of offending commits otherwise.",
+    "arm plan deterministically prints next version + changelog preview without side effects.",
+    "arm release --dry-run has zero side effects (no file changes, no commit/tag, no dist artifact, no .arm write).",
+    "arm release (non-dry) updates CHANGELOG.md, optionally commits and tags, and produces a zip artifact in dist/.",
+    "arm rollback reverts the last release using .arm/last_release.json: deletes tag, reverts changelog commit (or hard reset if --hard), deletes artifacts listed.",
+    "Works on macOS/Linux with Python 3.12 + git installed."
+  ],
+  "implementation_tasks": [
+    "Initialize python project structure under repo_dir with src layout.",
+    "Implement arm.git_client (subprocess wrapper) with: last_tag, commit_log(range), diff_stat, is_dirty, commit_file, create_tag, delete_tag.",
+    "Implement conventional commit parser + validator.",
+    "Implement semver parse/bump + compute_next_version across commits (max bump wins).
+",
+    "Implement changelog generator + prepend logic.",
+    "Implement packager to create dist zip with include/exclude.",
+    "Implement transaction log writer + rollback executor.",
+    "Write tests: unit (parser/semver/changelog) + integration using temp git repo.",
+    "Document usage in README.md and ensure `python -m pip install -e .` exposes `arm`."
+  ],
+  "qa_checklist": [
+    "No tags scenario yields initial_version and range is handled.",
+    "Dirty tree fails by default; --allow-dirty bypasses.",
+    "Breaking change detection works in header and footer.",
+    "Dry-run verified via git status + filesystem checks in tests.",
+    "Rollback safe path uses git revert by default.",
+    "Zip excludes .git, .arm, dist by default; respects globs."
+  ],
+  "reporting": {
+    "coder_must_provide": [
+      "List of delivered files",
+      "How to run tests + output summary",
+      "Known limitations"
+    ]
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "task_id": "ARM-CLI-001",
+  "status": "DELIVERED",
+  "actor": "coder",
+  "timestamp_utc": "2026-02-18T20:58:00Z",
+  "summary": "Implemented ARM CLI MVP (local-only) with Typer commands status/validate/plan/release/rollback. Added git subprocess adapter for tags/log/diff and dirty-tree checks, Conventional Commits parser+validator, SemVer bump calculation, Markdown changelog generation (prepend), zip packager (stdlib zipfile), transaction log writer (.arm/last_release.json), and rollback executor. Added unit tests and a dry-run integration test that asserts zero side effects.",
+  "changed_files": [
+    "README.md",
+    "pyproject.toml",
+    ".gitignore",
+    "src/arm/cli.py",
+    "src/arm/adapters/git.py",
+    "src/arm/services/__init__.py",
+    "src/arm/services/conventional_commits.py",
+    "src/arm/services/semver.py",
+    "src/arm/services/changelog.py",
+    "src/arm/services/packager.py",
+    "src/arm/services/transaction_log.py",
+    "src/arm/services/rollback.py",
+    "tests/test_state_machine.py",
+    "tests/test_conventional_commits.py",
+    "tests/test_semver.py",
+    "tests/test_changelog.py",
+    "tests/test_packager.py",
+    "tests/test_integration_dry_run.py",
+    "delivery/ARM-CLI-001.delivery.json"
+  ],
+  "commands_run": [
+    "python3.12 -m venv .venv",
+    "source .venv/bin/activate",
+    "pip install -e .[dev]",
+    "pytest"
+  ],
+  "test_results": {
+    "total": 10,
+    "passed": 10,
+    "failed": 0,
+    "skipped": 0
+  },
+  "acceptance_criteria_mapping": [
+    {
+      "criterion": "arm validate returns exit 0 for compliant commits and exit 2 with a list of offending commits otherwise.",
+      "result": "pass",
+      "evidence": "validate_commits implemented; CLI exits with code 2 on validation errors (covered by unit tests for error collection)."
+    },
+    {
+      "criterion": "arm plan deterministically prints next version + changelog preview without side effects.",
+      "result": "pass",
+      "evidence": "arm plan reads git log, validates, computes bump, renders preview; no filesystem writes."
+    },
+    {
+      "criterion": "arm release --dry-run has zero side effects (no file changes, no commit/tag, no dist artifact, no .arm write).",
+      "result": "pass",
+      "evidence": "tests/test_integration_dry_run.py asserts no CHANGELOG.md, no .arm, no dist, and clean git status after dry-run."
+    },
+    {
+      "criterion": "arm release (non-dry) updates CHANGELOG.md, optionally commits and tags, and produces a zip artifact in dist/.",
+      "result": "partial",
+      "evidence": "Implemented behavior; not yet covered by integration test in this round."
+    },
+    {
+      "criterion": "arm rollback reverts the last release using .arm/last_release.json: deletes tag, reverts changelog commit (or hard reset if --hard), deletes artifacts listed.",
+      "result": "partial",
+      "evidence": "Implemented rollback executor; not yet covered by integration test in this round."
+    }
+  ],
+  "known_issues": [
+    "This project directory itself is not a git repository; integration tests create a temp git repo to validate behavior.",
+    "release/rollback non-dry paths are implemented but lack integration coverage in this round (unit coverage exists for supporting pieces).",
+    "Tag parsing assumes tags are of the form <prefix><semver> (e.g., v1.2.3); non-semver tags matching prefix may raise during plan/release."
+  ],
+  "risks": [
+    "Rollback safety depends on correct transaction log contents; further integration tests recommended for tag deletion and revert behavior.",
+    "Packager exclude-globs are basic; glob semantics may need refinement for edge cases (nested patterns)."
+  ],
+  "blockers": [],
+  "artifacts": [
+    "delivery/ARM-CLI-001.delivery.json"
+  ]
+}
